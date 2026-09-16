@@ -232,6 +232,10 @@ function callGeminiAPI(key, promptContent, res) {
   apiReq.end();
 }
 
-server.listen(port, () => {
-  console.log(`🚀 PyMastery Secure Server running at http://localhost:${port}`);
-});
+if (require.main === module) {
+  server.listen(port, () => {
+    console.log(`🚀 PyMastery Secure Server running at http://localhost:${port}`);
+  });
+}
+
+module.exports = server;
