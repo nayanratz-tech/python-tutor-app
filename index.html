@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PyMastery | Living Python Book & Interactive Tutor</title>
+  <!-- Google Fonts: Inter & JetBrains Mono -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <!-- CodeMirror 5 CSS & JS -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/codemirror.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/theme/dracula.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/codemirror.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/mode/python/python.min.js"></script>
+  <!-- Pyodide Python 3.11 Wasm Engine -->
+  <script src="https://cdn.jsdelivr.net/pyodide/v0.25.1/full/pyodide.js"></script>
+  <!-- Custom Stylesheet -->
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div id="app" class="app-container">
+    
+    <!-- Top Bar Navigation -->
+    <header class="top-nav">
+      <div class="brand">
+        <button class="btn-icon sidebar-toggle-btn" id="headerToggleLessonBtn" title="Toggle Lesson Drawer">📖</button>
+        <div class="brand-logo">🐍</div>
+        <div class="brand-text">
+          <span class="title">PyMastery</span>
+          <span class="subtitle">Interactive Python Tutor</span>
+        </div>
+      </div>
+
+      <!-- Chapter / Tier Selection Pills -->
+      <nav class="tier-nav" id="tierNav">
+        <!-- Rendered via JavaScript -->
+      </nav>
+
+      <!-- Engine Status & Control Bar -->
+      <div class="header-actions">
+        <div class="engine-badge" id="engineStatus">
+          <span class="dot yellow"></span> Loading Python Engine...
+        </div>
+        <button class="btn btn-primary" id="btnRunCode">
+          <span>▶ Run Code</span>
+        </button>
+        <button class="btn btn-secondary" id="btnRunTests">
+          <span>🧪 Run Test Suite</span>
+        </button>
+      </div>
+    </header>
+
+    <!-- Main Workspace Container -->
+    <div class="workspace-grid">
+
+      <!-- Left Panel: Lesson & Tutorial Drawer -->
+      <aside class="panel lesson-panel" id="lessonPanel">
+        <div class="panel-header">
+          <div class="lesson-meta">
+            <span class="badge" id="lessonBadge">Level 0</span>
+            <h2 id="lessonTitle">Loading Chapter...</h2>
+          </div>
+          <button class="btn-icon" id="toggleLessonBtn" title="Toggle Sidebar">◀</button>
+        </div>
+
+        <div class="panel-body lesson-scroll">
+          <div class="lesson-subtitle" id="lessonSubtitle"></div>
+
+          <!-- Lesson Selector -->
+          <div class="lesson-selector-wrapper">
+            <label for="lessonSelect">Chapter Topic:</label>
+            <select id="lessonSelect" class="custom-select"></select>
+          </div>
+
+          <!-- Variations Selector -->
+          <div class="variations-wrapper" id="variationsWrapper">
+            <label>Code Variations & Examples:</label>
+            <div class="variations-pills" id="variationsPills"></div>
+          </div>
+
+          <!-- Dynamic Concept Content -->
+          <div class="concept-card" id="lessonConcept"></div>
+
+          <!-- Ask Python Tutor Question Box -->
+          <div class="tutor-qa-card">
+            <div class="qa-header">
+              <span>💬 Ask the Python Tutor</span>
+            </div>
+            <div class="qa-input-group">
+              <input type="text" id="qaInput" placeholder="Why do we use double quotes? What is id()?" />
+              <button class="btn-sm btn-primary" id="qaSubmit">Ask</button>
+            </div>
+            <div class="qa-response hidden" id="qaResponse"></div>
+          </div>
+
+          <!-- Hints Accordion -->
+          <div class="hints-box">
+            <div class="hints-header" id="hintsToggle">
+              <span>💡 Chapter Key Takeaways</span>
+              <span class="arrow">▼</span>
+            </div>
+            <div class="hints-body hidden" id="hintsBody">
+              <ul id="hintsList"></ul>
+            </div>
+          </div>
+        </div>
+      </aside>
+
+      <!-- Center Panel: Editor & Line Breakdown + Terminal Split -->
+      <main class="panel editor-terminal-panel">
+        
+        <!-- Top Pane: Code Editor & Line Inspector Split -->
+        <div class="editor-section">
+          <div class="editor-toolbar">
+            <div class="file-tabs" id="fileTabs">
+              <!-- Rendered file tabs -->
+            </div>
+            <div class="editor-actions">
+              <span class="line-hint-badge">💡 Move cursor to inspect line explanation</span>
+              <button class="btn-sm" id="btnResetCode">↺ Reset Code</button>
+            </div>
+          </div>
+
+          <div class="editor-inspector-split">
+            <!-- CodeMirror Editor Container -->
+            <div class="code-editor-container">
+              <textarea id="codeEditor"></textarea>
+            </div>
+
+            <!-- Line-by-Line Breakdown Inspector Panel -->
+            <div class="line-inspector-panel" id="lineInspector">
+              <div class="inspector-header">
+                <span>🔍 Line Breakdown Inspector</span>
+                <span class="line-tag" id="activeLineTag">Line 1</span>
+              </div>
+              <div class="inspector-body">
+                <div class="inspect-group">
+                  <div class="group-title text-emerald">1. Why this line?</div>
+                  <div class="group-content" id="whyThisLine">Click or hover any line of code in the editor to see its breakdown.</div>
+                </div>
+                <div class="inspect-group">
+                  <div class="group-title text-purple">2. Why that concept?</div>
+                  <div class="group-content" id="whyThatConcept">-</div>
+                </div>
+                <div class="inspect-group">
+                  <div class="group-title text-amber">3. Why NOT something else?</div>
+                  <div class="group-content" id="whyNotElse">-</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Bottom Pane: Terminal Console & Memory Inspector -->
+        <div class="terminal-section">
+          <div class="terminal-tabs-header">
+            <div class="tab-group">
+              <button class="tab-btn active" data-tab="terminal">Console Terminal Output</button>
+              <button class="tab-btn" data-tab="memory">🔍 Memory & Variable Inspector</button>
+            </div>
+            <button class="btn-sm btn-clear" id="btnClearTerminal">Clear Terminal</button>
+          </div>
+
+          <div class="terminal-body">
+            <!-- Terminal Tab Content -->
+            <div class="tab-content active" id="tabTerminal">
+              <pre class="terminal-output" id="terminalConsole">Ready. Move cursor across lines to inspect code, or click 'Run Code' to execute.</pre>
+            </div>
+
+            <!-- Memory Inspector Tab Content -->
+            <div class="tab-content" id="tabMemory">
+              <div class="memory-inspector-view" id="memoryView">
+                <p class="placeholder-text">Run Python code to inspect variable allocations and state in real-time.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </main>
+
+    </div>
+
+    <!-- Toast Notification Overlay -->
+    <div id="toast" class="toast hidden"></div>
+
+  </div>
+
+  <!-- Curriculum & App Logic -->
+  <script src="curriculum.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
