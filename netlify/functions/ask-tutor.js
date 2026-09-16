@@ -1,4 +1,4 @@
-// Vercel Serverless Function for PyMastery Claude AI Tutor
+// Netlify Serverless Function for PyMastery Claude AI Tutor
 const https = require('https');
 
 const SYSTEM_PROMPT = `You are PyMastery AI, an expert, highly pedagogical Python programming tutor. 
@@ -77,47 +77,49 @@ function callClaudeApi(apiKey, promptContent, modelIndex = 0) {
   });
 }
 
-module.exports = async (req, res) => {
-  // CORS Headers
-  res.setHeader('Access-Control-Allow-Credentials', true);
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,PATCH,DELETE,POST,PUT');
-  res.setHeader('Access-Control-Allow-Headers', 'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version');
+exports.handler = async (event, context) => {
+  const headers = {
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Headers': 'Content-Type',
+    'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+    'Content-Type': 'application/json'
+  };
 
-  if (req.method === 'OPTIONS') {
-    return res.status(200).end();
+  if (event.httpMethod === 'OPTIONS') {
+    return { statusCode: 200, headers, body: '' };
   }
 
-  if (req.method === 'GET') {
-    return res.status(200).json({ status: 'online', service: 'PyMastery AI Tutor API' });
+  if (event.httpMethod === 'GET') {
+    return { statusCode: 200, headers, body: JSON.stringify({ status: 'online', service: 'PyMastery Netlify Function' }) };
   }
 
-  if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method Not Allowed' });
+  if (event.httpMethod !== 'POST') {
+    return { statusCode: 405, headers, body: JSON.stringify({ error: 'Method Not Allowed' }) };
   }
 
-  // Parse Body safely
-  let body = req.body;
-  if (typeof body === 'string') {
-    try {
-      body = JSON.parse(body);
-    } catch (e) {
-      body = {};
-    }
+  let body = {};
+  try {
+    body = JSON.parse(event.body || '{}');
+  } catch (e) {
+    body = {};
   }
-  const { question, currentLine, codeContext } = body || {};
 
+  const { question, currentLine, codeContext } = body;
   const apiKey = process.env.CLAUDE_API_KEY;
+
   if (!apiKey) {
-    // Graceful fallback when API key is not configured in Vercel environment
-    return res.status(200).json({
-      fallback: true,
-      error: 'CLAUDE_API_KEY is not configured in Vercel Environment Variables.'
-    });
+    return {
+      statusCode: 200,
+      headers,
+      body: JSON.stringify({
+        fallback: true,
+        error: 'CLAUDE_API_KEY is not configured on Netlify environment.'
+      })
+    };
   }
 
   if (!question) {
-    return res.status(400).json({ error: 'Question is required.' });
+    return { statusCode: 400, headers, body: JSON.stringify({ error: 'Question is required.' }) };
   }
 
   let promptContent = `Student Question: "${question}"\n`;
@@ -125,8 +127,8 @@ module.exports = async (req, res) => {
 
   const result = await callClaudeApi(apiKey, promptContent, 0);
   if (result.error) {
-    return res.status(200).json({ fallback: true, error: result.error });
+    return { statusCode: 200, headers, body: JSON.stringify({ fallback: true, error: result.error }) };
   }
 
-  return res.status(200).json({ answer: result.answer });
+  return { statusCode: 200, headers, body: JSON.stringify({ answer: result.answer }) };
 };
