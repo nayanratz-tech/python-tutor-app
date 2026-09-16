@@ -1,0 +1,10 @@
+{
+  "version": 2,
+  "name": "python-tutor-app",
+  "rewrites": [
+    {
+      "source": "/api/ask-tutor",
+      "destination": "/api/ask-tutor.js"
+    }
+  ]
+}
