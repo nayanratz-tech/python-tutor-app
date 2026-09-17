@@ -15,6 +15,8 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/mode/python/python.min.js"></script>
   <!-- Pyodide Python 3.11 Wasm Engine -->
   <script src="https://cdn.jsdelivr.net/pyodide/v0.25.1/full/pyodide.js"></script>
+  <!-- Canvas Confetti Library -->
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.2/dist/confetti.browser.min.js"></script>
   <!-- Custom Stylesheet -->
   <link rel="stylesheet" href="style.css">
 </head>
@@ -36,6 +38,25 @@
       <nav class="tier-nav" id="tierNav">
         <!-- Rendered via JavaScript -->
       </nav>
+
+      <!-- Gamification & Stats Widget -->
+      <div class="user-stats-bar">
+        <div class="stat-badge level-badge" id="statLevelBadge" title="Current Milestone Level">
+          👑 Lvl 1: Python Novice
+        </div>
+        <div class="xp-container" title="Experience Points">
+          <div class="xp-bar-bg">
+            <div class="xp-bar-fill" id="xpBarFill" style="width: 0%;"></div>
+          </div>
+          <span class="xp-text" id="statXpText">0 / 300 XP</span>
+        </div>
+        <div class="stat-badge streak-badge" id="statStreakBadge" title="Daily Practice Streak">
+          🔥 <span id="statStreakDays">1</span> Day
+        </div>
+        <button class="btn-achievements" id="btnOpenAchievements" title="View Badges & Achievements">
+          🏆 Achievements
+        </button>
+      </div>
 
       <!-- Engine Status & Control Bar -->
       <div class="header-actions">
@@ -185,6 +206,45 @@
     <!-- Toast Notification Overlay -->
     <div id="toast" class="toast hidden"></div>
 
+  </div>
+
+  <!-- Achievement Showcase Modal -->
+  <div id="achievementsModal" class="modal-overlay hidden">
+    <div class="modal-content glass-card">
+      <div class="modal-header">
+        <div class="modal-title-group">
+          <h2>🏆 Achievement Showcase</h2>
+          <p class="modal-subtitle">Earn XP by running code, passing test suites, and completing Python chapters!</p>
+        </div>
+        <button class="btn-close-modal" id="btnCloseAchievements">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="level-summary-card">
+          <div class="level-icon" id="modalLevelIcon">👑</div>
+          <div class="level-info">
+            <div class="level-name" id="modalLevelName">Level 1: Python Novice</div>
+            <div class="level-progress-bar">
+              <div class="level-progress-fill" id="modalLevelProgressFill" style="width: 0%;"></div>
+            </div>
+            <div class="level-desc" id="modalLevelDesc">Next Level: Level 2 (Byte Explorer) at 300 XP</div>
+          </div>
+        </div>
+
+        <h3 class="section-title">Unlockable Course Badges</h3>
+        <div class="badges-grid" id="badgesGrid">
+          <!-- Rendered dynamically -->
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Achievement Unlock Toast Banner -->
+  <div id="achievementToast" class="achievement-toast hidden">
+    <div class="toast-icon" id="achToastIcon">🏆</div>
+    <div class="toast-text">
+      <div class="toast-title" id="achToastTitle">Badge Unlocked!</div>
+      <div class="toast-desc" id="achToastDesc">First Spark</div>
+    </div>
   </div>
 
   <!-- Curriculum & App Logic -->

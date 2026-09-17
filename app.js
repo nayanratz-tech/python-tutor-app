@@ -49,6 +49,7 @@
     try {
       initCodeEditor();
       setupEventListeners();
+      loadGamificationState();
       renderChapterNavigation();
       loadCurrentLesson();
       await initPyodideEngine();
@@ -450,6 +451,9 @@
       appendTerminalOutput("\n--- Program Execution Complete ---", 'sys');
       showToast("Code Executed Successfully!");
 
+      addXp(50, "Code Execution");
+      unlockBadge('first_spark');
+
       inspectVariableMemoryState();
 
     } catch (err) {
@@ -481,6 +485,16 @@
       await pyodideInstance.runPythonAsync(fullTestScript);
       
       showToast("🎉 All Challenge Tests Passed!");
+      addXp(100, "Automated Test Suite Passed!");
+      unlockBadge('bug_hunter');
+      
+      // Unlock chapter badge if applicable
+      if (currentChapterIndex === 0) unlockBadge('ch1_master');
+      if (currentChapterIndex === 1) unlockBadge('ch2_master');
+      if (currentChapterIndex === 2) unlockBadge('ch3_master');
+      if (currentChapterIndex === 3) unlockBadge('ch4_master');
+
+      triggerConfettiBurst();
       inspectVariableMemoryState();
 
     } catch (err) {
@@ -542,6 +556,8 @@
         "🟠 <strong>3. Why NOT something else?</strong><br>" + escapeHtml(analysis.whyNot);
     }
 
+    addXp(20, "Asked AI Tutor");
+    unlockBadge('ai_scholar');
     qaInput.value = '';
   }
 
@@ -601,9 +617,197 @@ _inspect_globals()
 
       html += '</tbody></table>';
       memoryView.innerHTML = html;
+      unlockBadge('memory_sleuth');
 
     } catch (e) {
       console.warn("Memory inspection fallback:", e);
+    }
+  }
+
+  // --- GAMIFICATION & ACHIEVEMENT ENGINE (LEVELS 1 - 3) ---
+  const GAMIFICATION_KEY = 'pymastery_gamification_v1';
+
+  const LEVEL_TIERS = [
+    { level: 1, name: 'Python Novice', icon: '🐍', minXp: 0, maxXp: 300, desc: 'Next Level: Level 2 (Byte Explorer) at 300 XP' },
+    { level: 2, name: 'Byte Explorer', icon: '🔷', minXp: 301, maxXp: 800, desc: 'Next Level: Level 3 (Script Crafter) at 800 XP' },
+    { level: 3, name: 'Script Crafter', icon: '👑', minXp: 801, maxXp: 1500, desc: '🎉 Maximum Course Milestone Reached! Master of Python Fundamentals.' }
+  ];
+
+  const COURSE_BADGES = [
+    { id: 'first_spark', icon: '⚡', title: 'First Spark', desc: 'Run your very first Python program in WASM.' },
+    { id: 'memory_sleuth', icon: '🧠', title: 'Memory Sleuth', desc: 'Inspect live variable memory allocation.' },
+    { id: 'bug_hunter', icon: '🧪', title: 'Bug Hunter', desc: 'Pass your first automated challenge test suite.' },
+    { id: 'ai_scholar', icon: '🤖', title: 'AI Scholar', desc: 'Ask a question to the AI Python Tutor.' },
+    { id: 'ch1_master', icon: '🐍', title: 'Variable Virtuoso', desc: 'Complete Chapter 1: Variables & Data Types.' },
+    { id: 'ch2_master', icon: '🔀', title: 'Branch Master', desc: 'Complete Chapter 2: Control Flow & If-Statements.' },
+    { id: 'ch3_master', icon: '🔁', title: 'Loop Legend', desc: 'Complete Chapter 3: For & While Loops.' },
+    { id: 'ch4_master', icon: '📦', title: 'Data Sculptor', desc: 'Complete Chapter 4: Lists & Dictionaries.' },
+    { id: 'script_crafter', icon: '👑', title: 'Script Crafter', desc: 'Reach Level 3 Milestone (800+ XP)!' }
+  ];
+
+  let gamificationState = {
+    xp: 0,
+    level: 1,
+    streakDays: 1,
+    lastActiveDate: new Date().toDateString(),
+    unlockedBadges: [],
+    completedChapters: []
+  };
+
+  function loadGamificationState() {
+    try {
+      const saved = localStorage.getItem(GAMIFICATION_KEY);
+      if (saved) {
+        gamificationState = { ...gamificationState, ...JSON.parse(saved) };
+      }
+      checkStreak();
+      updateGamificationUI();
+    } catch (e) {
+      console.warn("Error loading gamification state:", e);
+    }
+  }
+
+  function saveGamificationState() {
+    try {
+      localStorage.setItem(GAMIFICATION_KEY, JSON.stringify(gamificationState));
+      updateGamificationUI();
+    } catch (e) {
+      console.warn("Error saving gamification state:", e);
+    }
+  }
+
+  function checkStreak() {
+    const today = new Date().toDateString();
+    if (!gamificationState.lastActiveDate) {
+      gamificationState.lastActiveDate = today;
+      gamificationState.streakDays = 1;
+      return;
+    }
+
+    if (gamificationState.lastActiveDate === today) return;
+
+    const last = new Date(gamificationState.lastActiveDate);
+    const now = new Date(today);
+    const diffDays = Math.round((now - last) / (1000 * 60 * 60 * 24));
+
+    if (diffDays === 1) {
+      gamificationState.streakDays += 1;
+    } else if (diffDays > 1) {
+      gamificationState.streakDays = 1;
+    }
+    gamificationState.lastActiveDate = today;
+  }
+
+  function addXp(amount, reason = '') {
+    gamificationState.xp += amount;
+    showToast(`+${amount} XP! ${reason}`);
+
+    // Check Level Up (Cap at Level 3: Script Crafter)
+    let newLevel = 1;
+    if (gamificationState.xp >= 800) {
+      newLevel = 3;
+      unlockBadge('script_crafter');
+    } else if (gamificationState.xp >= 300) {
+      newLevel = 2;
+    }
+
+    if (newLevel > gamificationState.level) {
+      gamificationState.level = newLevel;
+      const currentTier = LEVEL_TIERS.find(t => t.level === newLevel);
+      showAchievementToast(`Level Up! ${currentTier.icon} ${currentTier.name}`, `Reached Level ${newLevel}`);
+      triggerConfettiBurst();
+    }
+
+    saveGamificationState();
+  }
+
+  function unlockBadge(badgeId) {
+    if (gamificationState.unlockedBadges.includes(badgeId)) return;
+
+    const badge = COURSE_BADGES.find(b => b.id === badgeId);
+    if (!badge) return;
+
+    gamificationState.unlockedBadges.push(badgeId);
+    saveGamificationState();
+
+    showAchievementToast(`Badge Unlocked: ${badge.title}`, badge.desc, badge.icon);
+    triggerConfettiBurst();
+  }
+
+  function showAchievementToast(title, desc, icon = '🏆') {
+    const toast = document.getElementById('achievementToast');
+    const toastIcon = document.getElementById('achToastIcon');
+    const toastTitle = document.getElementById('achToastTitle');
+    const toastDesc = document.getElementById('achToastDesc');
+
+    if (!toast) return;
+    if (toastIcon) toastIcon.textContent = icon;
+    if (toastTitle) toastTitle.textContent = title;
+    if (toastDesc) toastDesc.textContent = desc;
+
+    toast.classList.remove('hidden');
+    setTimeout(() => toast.classList.add('hidden'), 4000);
+  }
+
+  function triggerConfettiBurst() {
+    if (window.confetti) {
+      window.confetti({
+        particleCount: 100,
+        spread: 70,
+        origin: { y: 0.6 }
+      });
+    }
+  }
+
+  function updateGamificationUI() {
+    const currentTier = LEVEL_TIERS.find(t => t.level === gamificationState.level) || LEVEL_TIERS[0];
+    const statLevelBadge = document.getElementById('statLevelBadge');
+    const statXpText = document.getElementById('statXpText');
+    const xpBarFill = document.getElementById('xpBarFill');
+    const statStreakDays = document.getElementById('statStreakDays');
+
+    if (statLevelBadge) statLevelBadge.textContent = `${currentTier.icon} Lvl ${currentTier.level}: ${currentTier.name}`;
+    if (statStreakDays) statStreakDays.textContent = gamificationState.streakDays;
+
+    let pct = 0;
+    if (currentTier.level === 3) {
+      pct = 100;
+      if (statXpText) statXpText.textContent = `${gamificationState.xp} XP (Script Crafter)`;
+    } else {
+      const nextTier = LEVEL_TIERS.find(t => t.level === currentTier.level + 1);
+      const range = nextTier.minXp - currentTier.minXp;
+      const currentProgress = gamificationState.xp - currentTier.minXp;
+      pct = Math.min(100, Math.max(0, (currentProgress / range) * 100));
+      if (statXpText) statXpText.textContent = `${gamificationState.xp} / ${nextTier.minXp} XP`;
+    }
+    if (xpBarFill) xpBarFill.style.width = `${pct}%`;
+
+    // Modal UI
+    const modalLevelIcon = document.getElementById('modalLevelIcon');
+    const modalLevelName = document.getElementById('modalLevelName');
+    const modalLevelProgressFill = document.getElementById('modalLevelProgressFill');
+    const modalLevelDesc = document.getElementById('modalLevelDesc');
+    const badgesGrid = document.getElementById('badgesGrid');
+
+    if (modalLevelIcon) modalLevelIcon.textContent = currentTier.icon;
+    if (modalLevelName) modalLevelName.textContent = `Level ${currentTier.level}: ${currentTier.name}`;
+    if (modalLevelProgressFill) modalLevelProgressFill.style.width = `${pct}%`;
+    if (modalLevelDesc) modalLevelDesc.textContent = currentTier.desc;
+
+    if (badgesGrid) {
+      badgesGrid.innerHTML = '';
+      COURSE_BADGES.forEach(b => {
+        const isUnlocked = gamificationState.unlockedBadges.includes(b.id);
+        const card = document.createElement('div');
+        card.className = `badge-card ${isUnlocked ? 'unlocked' : 'locked'}`;
+        card.innerHTML = `
+          <div class="badge-card-icon">${b.icon}</div>
+          <div class="badge-card-title">${b.title}</div>
+          <div class="badge-card-desc">${b.desc}</div>
+          <div class="badge-status">${isUnlocked ? '✓ Unlocked' : '🔒 Locked'}</div>
+        `;
+        badgesGrid.appendChild(card);
+      });
     }
   }
 
@@ -646,6 +850,32 @@ _inspect_globals()
     if (btnRunCode) btnRunCode.addEventListener('click', runPythonCode);
     if (btnRunTests) btnRunTests.addEventListener('click', runTestSuite);
     if (btnClearTerminal) btnClearTerminal.addEventListener('click', clearTerminal);
+
+    // Achievements Modal Event Listeners
+    const achievementsModal = document.getElementById('achievementsModal');
+    const btnOpenAchievements = document.getElementById('btnOpenAchievements');
+    const btnCloseAchievements = document.getElementById('btnCloseAchievements');
+
+    if (btnOpenAchievements && achievementsModal) {
+      btnOpenAchievements.addEventListener('click', () => {
+        updateGamificationUI();
+        achievementsModal.classList.remove('hidden');
+      });
+    }
+
+    if (btnCloseAchievements && achievementsModal) {
+      btnCloseAchievements.addEventListener('click', () => {
+        achievementsModal.classList.add('hidden');
+      });
+    }
+
+    if (achievementsModal) {
+      achievementsModal.addEventListener('click', (e) => {
+        if (e.target === achievementsModal) {
+          achievementsModal.classList.add('hidden');
+        }
+      });
+    }
 
     if (btnResetCode) {
       btnResetCode.addEventListener('click', () => {
